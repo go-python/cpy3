@@ -41,9 +41,9 @@ func main() {
 
 	nameModule := "foo"
 	fooModule := python3.PyImport_ImportModule(nameModule)
-	defer fooModule.DecRef()
-	if python3.PyErr_Occurred() != nil {
+	if fooModule == nil && python3.PyErr_Occurred() != nil {
 		err = errors.New("Error importing the python module")
+		fooModule.DecRef()
 		return
 	}
 
@@ -51,23 +51,35 @@ func main() {
 	evenAttr := "print_even"
 
 	odds := fooModule.GetAttrString(oddsAttr)
-	defer odds.DecRef()
-	if python3.PyErr_Occurred() != nil {
+	if odds == nil && python3.PyErr_Occurred() != nil {
 		err = errors.New("Error getting the attribute print_odds")
+		odds.DecRef()
 		return
 	}
 
 	even := fooModule.GetAttrString(evenAttr)
-	defer even.DecRef()
-	if python3.PyErr_Occurred() != nil {
+	if even == nil && python3.PyErr_Occurred() != nil {
 		err = errors.New("Error getting the attribute print_even")
+		even.DecRef()
 		return
 	}
 
 	limit := python3.PyLong_FromGoInt(50)
+	if limit == nil && python3.PyErr_Occurred() != nil {
+		err = errors.New("Error creating python long object")
+		limit.DecRef()
+		return
+	}
+
 	args := python3.PyTuple_New(1)
+	if args == nil && python3.PyErr_Occurred() != nil {
+		err = errors.New("Error creating python tuple object")
+		args.DecRef()
+		return
+	}
+
 	ret := python3.PyTuple_SetItem(args, 0, limit)
-	if ret != 0 || python3.PyErr_Occurred() != nil {
+	if ret != 0 {
 		args.DecRef()
 		limit.DecRef()
 		err = errors.New("Error setting a tuple item")
