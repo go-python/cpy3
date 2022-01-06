@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -9,14 +10,30 @@ import (
 )
 
 func main() {
+	var err error
+
+	// At the end of the main function execution
+	// it will check, print and exit with non-zero code if any error is here
+	defer func() {
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}()
+	// it will undo all initializations made by Py_Initialize()
+	defer python3.Py_Finalize()
+	// it will print any python error if it is here
+	//   no needs to call it after each single check of PyErr_Occurred()
+	defer python3.PyErr_Print()
+
 	// The following will also create the GIL explicitly
 	// by calling PyEval_InitThreads(), without waiting
 	// for the interpreter to do that
 	python3.Py_Initialize()
 
 	if !python3.Py_IsInitialized() {
-		fmt.Println("Error initializing the python interpreter")
-		os.Exit(1)
+		err = errors.New("Error initializing the python interpreter")
+		return
 	}
 
 	var wg sync.WaitGroup
@@ -24,27 +41,37 @@ func main() {
 
 	nameModule := "foo"
 	fooModule := python3.PyImport_ImportModule(nameModule)
-	if fooModule == nil {
-		fmt.Printf("The module %s doesn't exist\n", nameModule)
+	defer fooModule.DecRef()
+	if python3.PyErr_Occurred() != nil {
+		err = errors.New("Error importing the python module")
+		return
 	}
+
 	oddsAttr := "print_odds"
 	evenAttr := "print_even"
 
-	if !fooModule.HasAttrString(oddsAttr) {
-		fmt.Printf("The module doesn't have attribute %s\n", oddsAttr)
-		os.Exit(1)
-	}
-
-	if !fooModule.HasAttrString(evenAttr) {
-		fmt.Printf("The module doesn't have attribute %s\n", evenAttr)
-		os.Exit(1)
-	}
-
 	odds := fooModule.GetAttrString(oddsAttr)
-	even := fooModule.GetAttrString(evenAttr)
+	defer odds.DecRef()
+	if python3.PyErr_Occurred() != nil {
+		err = errors.New("Error getting the attribute print_odds")
+		return
+	}
 
-	if odds == nil || even == nil {
-		panic("Error importing function")
+	even := fooModule.GetAttrString(evenAttr)
+	defer even.DecRef()
+	if python3.PyErr_Occurred() != nil {
+		err = errors.New("Error getting the attribute print_even")
+		return
+	}
+
+	limit := python3.PyLong_FromGoInt(50)
+	args := python3.PyTuple_New(1)
+	ret := python3.PyTuple_SetItem(args, 0, limit)
+	if ret != 0 || python3.PyErr_Occurred() != nil {
+		args.DecRef()
+		limit.DecRef()
+		err = errors.New("Error setting a tuple item")
+		return
 	}
 
 	// Py_Initialize() has locked the the GIL but at this point we don't need it
@@ -54,7 +81,7 @@ func main() {
 
 	go func() {
 		_gstate := python3.PyGILState_Ensure()
-		odds.Call(python3.PyTuple_New(0), python3.PyDict_New())
+		odds.Call(args, python3.PyDict_New())
 		python3.PyGILState_Release(_gstate)
 
 		wg.Done()
@@ -62,7 +89,7 @@ func main() {
 
 	go func() {
 		_gstate := python3.PyGILState_Ensure()
-		even.Call(python3.PyTuple_New(0), python3.PyDict_New())
+		even.Call(args, python3.PyDict_New())
 		python3.PyGILState_Release(_gstate)
 
 		wg.Done()
@@ -74,5 +101,4 @@ func main() {
 	// program, we can restore the state and lock the GIL to perform
 	// the final operations before exiting.
 	python3.PyEval_RestoreThread(state)
-	python3.Py_Finalize()
 }
