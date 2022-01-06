@@ -22,20 +22,21 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	fooModule := python3.PyImport_ImportModule("foo")
+	nameModule := "foo"
+	fooModule := python3.PyImport_ImportModule(nameModule)
 	if fooModule == nil {
-		fmt.Println("The module fooModule doesn't exist")
+		fmt.Printf("The module %s doesn't exist\n", nameModule)
 	}
 	oddsAttr := "print_odds"
 	evenAttr := "print_even"
 
 	if !fooModule.HasAttrString(oddsAttr) {
-		fmt.Printf("The module doesn't have attribute %s", oddsAttr)
+		fmt.Printf("The module doesn't have attribute %s\n", oddsAttr)
 		os.Exit(1)
 	}
 
 	if !fooModule.HasAttrString(evenAttr) {
-		fmt.Printf("The module doesn't have attribute %s", evenAttr)
+		fmt.Printf("The module doesn't have attribute %s\n", evenAttr)
 		os.Exit(1)
 	}
 
