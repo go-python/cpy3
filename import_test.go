@@ -24,9 +24,9 @@ func TestImportModule(t *testing.T) {
 func TestImportModuleEx(t *testing.T) {
 	Py_Initialize()
 
-	test := PyImport_ImportModuleEx("test", nil, nil, nil)
-	assert.NotNil(t, test)
-	test.DecRef()
+	queue := PyImport_ImportModuleEx("queue", nil, nil, nil)
+	assert.NotNil(t, queue)
+	queue.DecRef()
 }
 
 func TestImportModuleLevelObject(t *testing.T) {

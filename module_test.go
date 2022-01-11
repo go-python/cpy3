@@ -99,16 +99,13 @@ func TestModuleGetState(t *testing.T) {
 func TestModuleGetFilenameObject(t *testing.T) {
 	Py_Initialize()
 
-	name := "test"
-	pyName := PyUnicode_FromString(name)
-	defer pyName.DecRef()
+	name := "queue"
+	queue := PyImport_ImportModule(name)
+	defer queue.DecRef()
 
-	test := PyImport_ImportModule(name)
-	defer test.DecRef()
-
-	pyFilename := PyModule_GetFilenameObject(test)
+	pyFilename := PyModule_GetFilenameObject(queue)
 	assert.NotNil(t, pyFilename)
 	filename := PyUnicode_AsUTF8(pyFilename)
 
-	assert.True(t, strings.Contains(filename, "/test/__init__.py"))
+	assert.True(t, strings.HasSuffix(filename, "/queue.py"))
 }
