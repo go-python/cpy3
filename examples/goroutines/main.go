@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -16,7 +16,7 @@ func main() {
 	// prints the error and exit with the non-zero code
 	defer func() {
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("%+v", err)
 			os.Exit(1)
 		}
 	}()
